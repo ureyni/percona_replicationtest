@@ -12,7 +12,7 @@ we use percona mysql cluster 5.5, 5.6 , 5.7
        Nodes : 10.145.172.61,62,63</br>
        proxysql : 10.145.172.60</br>
     
-    <b>wsrep.conf :</b> 
+    wsrep.conf : 
     wsrep_sync_wait=1
     wsrep_causal_reads=ON
 
