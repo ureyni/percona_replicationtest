@@ -10,24 +10,18 @@
 /*
  * if connection close of real percona node , get reconnect on proxysql
  */
-function getMysqlConn() {
-    print PHP_EOL."Mysql Proxy Reconnection";
-    $mysqli = new mysqli("10.145.172.60", "testuser", "testPass#", "test", 3306);
+function getMysqlConn($index=0) {
+    print PHP_EOL."Mysql Reconnection";
+    $mysqli = new mysqli("10.145.172.6".$index, "testuser", "testPass#", "test", 3306);
+    $mysqli->query("set SESSION wsrep_sync_wait=1");
+    $mysqli->query("set GLOBAL have_query_cache=NO");
+    $mysqli->query("set GLOBAL query_cache_size=0");
     return $mysqli;
 }
 
-$mysqlidb1 = new mysqli("10.145.172.61", "testuser", "testPass#", "test", 3306);
-if (mysqli_connect_errno()) {
-    $mysqlidb1 = new mysqli("10.145.172.60", "testuser", "testPass#", "test", 3306);
-}
-$mysqlidb2 = new mysqli("10.145.172.62", "testuser", "testPass#", "test", 3306);
-if (mysqli_connect_errno()) {
-    $mysqlidb2 = new mysqli("10.145.172.60", "testuser", "testPass#", "test", 3306);
-}
-$mysqlidb3 = new mysqli("10.145.172.63", "testuser", "testPass#", "test", 3306);
-if (mysqli_connect_errno()) {
-    $mysqlidb3 = new mysqli("10.145.172.60", "testuser", "testPass#", "test", 3306);
-}
+$mysqlidb1 = getMysqlConn(1);
+$mysqlidb2 = getMysqlConn(2);
+$mysqlidb3 = getMysqlConn(3);
 
 //$mysqlidb1->autocommit(false);
 /* check connection */
@@ -41,7 +35,7 @@ $insertSQL = "truncate table test.ondisk";
 $stmt = $mysqlidb1->prepare($insertSQL);
 if (!$stmt->execute())
     print PHP_EOL . "Truncate : " . $mysqlidb1->error;
-sleep(1);
+
 /* Prepare an insert statement */
 $insertSQL = "INSERT INTO test.ondisk (c1,c2) VALUES (?,?)";
 $stmt = $mysqlidb1->prepare($insertSQL);
@@ -57,9 +51,10 @@ for ($index = 1; $index < 10000; $index++) {
     /* Execute the statement */
     if (!$stmt->execute())
         print PHP_EOL . "INSERT HATASI : " . $mysqlidb1->error;
-    $mysqlidb1->commit();
+    if (!$mysqlidb1->commit(MYSQLI_TRANS_START_READ_WRITE))
+        print PHP_EOL." Commit Error $index";
     $query = "select * from test.ondisk where c1=$index";
-   // usleep(5000);
+    //usleep(5000);
     if (!$mysqlidb2->ping())
         $mysqlidb2 = getMysqlConn();
 
